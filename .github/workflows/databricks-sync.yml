@@ -76,6 +76,15 @@ jobs:
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
           chmod 600 ~/.databrickscfg
           
+      - name: Verify Databricks credentials
+        run: |
+          if [ -z "${{ secrets.DATABRICKS_HOST }}" ] || [ -z "${{ secrets.DATABRICKS_TOKEN }}" ]; then
+            echo "ERROR: Databricks secrets are not set!"
+            echo "Please add DATABRICKS_HOST and DATABRICKS_TOKEN secrets to GitHub"
+            exit 1
+          fi
+          echo "✓ Databricks credentials verified"
+          
       - name: Determine target workspace path
         id: target_path
         run: |
@@ -135,6 +144,15 @@ jobs:
           echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
           chmod 600 ~/.databrickscfg
+          
+      - name: Verify Databricks credentials
+        run: |
+          if [ -z "${{ secrets.DATABRICKS_HOST }}" ] || [ -z "${{ secrets.DATABRICKS_TOKEN }}" ]; then
+            echo "ERROR: Databricks secrets are not set!"
+            echo "Please add DATABRICKS_HOST and DATABRICKS_TOKEN secrets to GitHub"
+            exit 1
+          fi
+          echo "✓ Databricks credentials verified"
           
       - name: Determine target workspace path
         id: target_path
