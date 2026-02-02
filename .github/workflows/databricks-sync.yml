@@ -34,6 +34,8 @@ jobs:
           pip install pytest pyyaml pandas scikit-learn numpy
           
       - name: Run unit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest tests/ -v --tb=short
           
