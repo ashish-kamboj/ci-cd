@@ -49,6 +49,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push'  # Only sync on pushes, not PRs
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
     
     steps:
       - name: Checkout code
@@ -106,6 +109,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push'
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
     
     steps:
       - name: Checkout code

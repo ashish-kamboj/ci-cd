@@ -97,10 +97,10 @@ def upload_file(source_path, target_path, databricks_path):
     """
     try:
         # Ensure target directory exists
-        subprocess.run(
+        mkdir_result = subprocess.run(
             ['databricks', 'workspace', 'mkdirs', target_path],
-            check=False,
-            capture_output=True
+            capture_output=True,
+            text=True
         )
         
         # Get language for file (required by databricks-cli)
@@ -116,7 +116,10 @@ def upload_file(source_path, target_path, databricks_path):
             return True
         else:
             print(f"✗ Failed to upload: {databricks_path}")
-            print(f"  Error: {result.stderr}")
+            if result.stderr:
+                print(f"  Error: {result.stderr}")
+            if result.stdout:
+                print(f"  Output: {result.stdout}")
             return False
     except Exception as e:
         print(f"✗ Exception uploading {databricks_path}: {e}")
