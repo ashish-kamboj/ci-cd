@@ -57,6 +57,24 @@ def get_all_files(source_dir, exclude_patterns=None):
     return all_files
 
 
+def get_language_for_file(file_path):
+    """
+    Determine the language for a file based on extension.
+    Returns None for non-code files.
+    """
+    extension = os.path.splitext(file_path)[1].lower()
+    
+    # Code files that need language specification
+    code_extensions = {
+        '.py': 'PYTHON',
+        '.scala': 'SCALA',
+        '.sql': 'SQL',
+        '.r': 'R'
+    }
+    
+    return code_extensions.get(extension)
+
+
 def upload_file(source_path, target_path, databricks_path):
     """
     Upload a single file to Databricks using databricks-cli.
@@ -69,8 +87,16 @@ def upload_file(source_path, target_path, databricks_path):
             capture_output=True
         )
         
-        # Upload file
-        cmd = ['databricks', 'workspace', 'import', source_path, databricks_path, '--language', 'AUTO', '--format', 'AUTO']
+        # Build command based on file type
+        language = get_language_for_file(source_path)
+        
+        if language:
+            # For code files, specify language
+            cmd = ['databricks', 'workspace', 'import', source_path, databricks_path, '--language', language, '--overwrite']
+        else:
+            # For non-code files (markdown, yaml, txt, etc.), don't specify language
+            cmd = ['databricks', 'workspace', 'import', source_path, databricks_path, '--overwrite']
+        
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
