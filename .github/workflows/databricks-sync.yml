@@ -3,11 +3,11 @@ name: CI/CD Pipeline - Databricks Sync
 on:
   push:
     branches:
-      - develop
+      - dev
       - main
   pull_request:
     branches:
-      - develop
+      - dev
       - main
 
 env:
@@ -78,7 +78,7 @@ jobs:
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
             echo "workspace_path=/Repos/prod/ml-regression-model" >> $GITHUB_OUTPUT
           else
-            echo "workspace_path=/Repos/develop/ml-regression-model" >> $GITHUB_OUTPUT
+            echo "workspace_path=/Repos/dev/ml-regression-model" >> $GITHUB_OUTPUT
           fi
           
       - name: Create workspace directory structure
@@ -136,7 +136,7 @@ jobs:
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
             echo "workspace_path=/Repos/prod/ml-regression-model" >> $GITHUB_OUTPUT
           else
-            echo "workspace_path=/Repos/develop/ml-regression-model" >> $GITHUB_OUTPUT
+            echo "workspace_path=/Repos/dev/ml-regression-model" >> $GITHUB_OUTPUT
           fi
           
       - name: Remove deleted files from Databricks
