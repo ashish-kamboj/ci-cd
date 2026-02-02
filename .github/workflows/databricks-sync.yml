@@ -96,8 +96,14 @@ jobs:
           
       - name: Create workspace directory structure
         run: |
-          # Try to create workspace directory (it may already exist)
-          databricks workspace mkdirs "${{ steps.target_path.outputs.workspace_path }}" || true
+          # Create the full workspace path including parent directories
+          databricks workspace mkdirs "${{ steps.target_path.outputs.workspace_path }}"
+          if [ $? -eq 0 ]; then
+            echo "✓ Created/verified workspace directory: ${{ steps.target_path.outputs.workspace_path }}"
+          else
+            echo "ERROR: Failed to create workspace directory"
+            exit 1
+          fi
           
       - name: Upload repository files to Databricks
         run: |
