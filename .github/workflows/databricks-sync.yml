@@ -68,7 +68,6 @@ jobs:
           
       - name: Configure Databricks CLI
         run: |
-          mkdir -p ~/.databrickscfg
           echo "[DEFAULT]" > ~/.databrickscfg
           echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
@@ -126,7 +125,6 @@ jobs:
           
       - name: Configure Databricks CLI
         run: |
-          mkdir -p ~/.databrickscfg
           echo "[DEFAULT]" > ~/.databrickscfg
           echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
