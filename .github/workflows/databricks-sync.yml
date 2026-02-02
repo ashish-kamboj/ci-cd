@@ -89,20 +89,9 @@ jobs:
         id: target_path
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "workspace_path=/Repos/prod/ml-regression-model" >> $GITHUB_OUTPUT
+            echo "workspace_path=/ml-regression-model-prod" >> $GITHUB_OUTPUT
           else
-            echo "workspace_path=/Repos/dev/ml-regression-model" >> $GITHUB_OUTPUT
-          fi
-          
-      - name: Create workspace directory structure
-        run: |
-          # Create the full workspace path including parent directories
-          databricks workspace mkdirs "${{ steps.target_path.outputs.workspace_path }}"
-          if [ $? -eq 0 ]; then
-            echo "✓ Created/verified workspace directory: ${{ steps.target_path.outputs.workspace_path }}"
-          else
-            echo "ERROR: Failed to create workspace directory"
-            exit 1
+            echo "workspace_path=/ml-regression-model-dev" >> $GITHUB_OUTPUT
           fi
           
       - name: Upload repository files to Databricks
@@ -164,9 +153,9 @@ jobs:
         id: target_path
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "workspace_path=/Repos/prod/ml-regression-model" >> $GITHUB_OUTPUT
+            echo "workspace_path=/ml-regression-model-prod" >> $GITHUB_OUTPUT
           else
-            echo "workspace_path=/Repos/dev/ml-regression-model" >> $GITHUB_OUTPUT
+            echo "workspace_path=/ml-regression-model-dev" >> $GITHUB_OUTPUT
           fi
           
       - name: Remove deleted files from Databricks
