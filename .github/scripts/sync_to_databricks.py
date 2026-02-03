@@ -57,20 +57,58 @@ def get_all_files(source_dir, exclude_patterns=None):
     return all_files
 
 
+def should_skip_upload(file_path):
+    """
+    Check if file should be skipped from upload.
+    Some files don't need to be in Databricks.
+    """
+    skip_extensions = {'.pyc', '.pyo', '.pyd', '.so', '.dll', '.exe'}
+    extension = os.path.splitext(file_path)[1].lower()
+    return extension in skip_extensions
+
+
+def get_language_for_file(file_path):
+    """
+    Determine the language for a file based on extension.
+    For code files, returns specific language.
+    For other files, returns PYTHON as default (Databricks requirement).
+    
+    Note: Non-code files (.md, .yaml, .txt, .json) are uploaded with PYTHON
+    language but display as their original type in Databricks.
+    """
+    extension = os.path.splitext(file_path)[1].lower()
+    
+    # Specific language mappings for code files
+    code_extensions = {
+        '.py': 'PYTHON',
+        '.scala': 'SCALA',
+        '.sql': 'SQL',
+        '.r': 'R'
+    }
+    
+    # Return specific language if found, otherwise use PYTHON as default
+    # Non-code files (.md, .yaml, .txt, .json, etc.) default to PYTHON
+    return code_extensions.get(extension, 'PYTHON')
+
+
 def upload_file(source_path, target_path, databricks_path):
     """
     Upload a single file to Databricks using databricks-cli.
     """
     try:
         # Ensure target directory exists
-        subprocess.run(
+        mkdir_result = subprocess.run(
             ['databricks', 'workspace', 'mkdirs', target_path],
-            check=False,
-            capture_output=True
+            capture_output=True,
+            text=True
         )
         
-        # Upload file
-        cmd = ['databricks', 'workspace', 'import', source_path, databricks_path, '--language', 'AUTO', '--format', 'AUTO']
+        # Get language for file (required by databricks-cli)
+        language = get_language_for_file(source_path)
+        
+        # Build command with language and overwrite flag
+        cmd = ['databricks', 'workspace', 'import', source_path, databricks_path, '--language', language, '--overwrite']
+        
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
@@ -78,7 +116,10 @@ def upload_file(source_path, target_path, databricks_path):
             return True
         else:
             print(f"✗ Failed to upload: {databricks_path}")
-            print(f"  Error: {result.stderr}")
+            if result.stderr:
+                print(f"  Error: {result.stderr}")
+            if result.stdout:
+                print(f"  Output: {result.stdout}")
             return False
     except Exception as e:
         print(f"✗ Exception uploading {databricks_path}: {e}")
@@ -100,6 +141,11 @@ def sync_files(source_dir, target_path, branch):
     
     for rel_path in all_files:
         source_file = os.path.join(source_dir, rel_path)
+        
+        # Skip binary and compiled files
+        if should_skip_upload(source_file):
+            print(f"⊘ Skipped: {rel_path} (binary/compiled file)")
+            continue
         
         # Convert Windows path separators to forward slashes
         rel_path_unix = rel_path.replace(os.sep, '/')
