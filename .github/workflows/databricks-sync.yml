@@ -49,6 +49,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push'  # Only sync on pushes, not PRs
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'databricks-prod' || 'databricks-dev' }}
+      url: https://databricks.com
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
@@ -113,6 +116,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push'
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'databricks-prod' || 'databricks-dev' }}
+      url: https://databricks.com
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
