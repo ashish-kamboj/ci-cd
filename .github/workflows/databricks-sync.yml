@@ -138,7 +138,7 @@ jobs:
             echo "📝 First commit - will create/update job"
           fi
           
-      - name: Create/Update Databricks Job
+      - name: Create/Update Databricks Job (Serverless)
         if: steps.config_changed.outputs.changed == 'true' || github.event_name == 'push'
         run: |
           python .github/scripts/manage_databricks_job.py \
