@@ -4,7 +4,7 @@
     {
       "task_key": "ml_training_task",
       "notebook_task": {
-        "notebook_path": "/ml-regression-model-prod/notebooks/train",
+        "notebook_path": "/ml-regression-model-prod/notebooks/train.ipynb",
         "base_parameters": {},
         "source": "WORKSPACE"
       },
