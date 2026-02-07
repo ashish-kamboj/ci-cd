@@ -79,6 +79,10 @@ jobs:
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
           chmod 600 ~/.databrickscfg
           
+      - name: Configure Jobs API 2.1
+        run: |
+          databricks jobs configure --version=2.1 || echo "Could not configure Jobs API version, continuing..."
+          
       - name: Verify Databricks credentials
         run: |
           if [ -z "${{ secrets.DATABRICKS_HOST }}" ] || [ -z "${{ secrets.DATABRICKS_TOKEN }}" ]; then
@@ -127,15 +131,15 @@ jobs:
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
             if git diff HEAD~1 HEAD --exit-code ${{ steps.job_config.outputs.config_file }} > /dev/null 2>&1; then
               echo "changed=false" >> $GITHUB_OUTPUT
-              echo "ℹ️ Job config unchanged - skipping job update"
+              echo "Job config unchanged - skipping job update"
             else
               echo "changed=true" >> $GITHUB_OUTPUT
-              echo "📝 Job config changed - will update job"
+              echo "Job config changed - will update job"
             fi
           else
             # First commit - always update
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "📝 First commit - will create/update job"
+            echo "First commit - will create/update job"
           fi
           
       - name: Create/Update Databricks Job (Serverless)
@@ -179,6 +183,10 @@ jobs:
           echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
           chmod 600 ~/.databrickscfg
+          
+      - name: Configure Jobs API 2.1
+        run: |
+          databricks jobs configure --version=2.1 || echo "Could not configure Jobs API version, continuing..."
           
       - name: Verify Databricks credentials
         run: |

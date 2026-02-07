@@ -23,7 +23,7 @@ def run_command(cmd, capture_output=True):
         )
         return result.stdout.strip() if capture_output else None
     except subprocess.CalledProcessError as e:
-        print(f" Command failed: {cmd}")
+        print(f"Command failed: {cmd}")
         print(f"Error: {e.stderr}")
         sys.exit(1)
 
@@ -36,10 +36,10 @@ def load_job_config(config_path):
         print(f"✓ Loaded job configuration from {config_path}")
         return config
     except FileNotFoundError:
-        print(f" Job config file not found: {config_path}")
+        print(f"Job config file not found: {config_path}")
         sys.exit(1)
     except json.JSONDecodeError as e:
-        print(f" Invalid JSON in config file: {e}")
+        print(f"Invalid JSON in config file: {e}")
         sys.exit(1)
 
 
@@ -55,7 +55,7 @@ def get_existing_job_id(job_name):
         
         return None
     except Exception as e:
-        print(f" Warning: Could not check existing jobs: {e}")
+        print(f"Warning: Could not check existing jobs: {e}")
         return None
 
 
@@ -69,10 +69,10 @@ def create_job(config_path):
     try:
         result = json.loads(output)
         job_id = result.get("job_id")
-        print(f" Job created successfully! Job ID: {job_id}")
+        print(f"Job created successfully! Job ID: {job_id}")
         return job_id
     except json.JSONDecodeError:
-        print(f" Job created successfully!")
+        print(f"Job created successfully!")
         return None
 
 
@@ -80,19 +80,15 @@ def update_job(job_id, config):
     """Update existing Databricks job"""
     print(f"Updating existing Databricks job (ID: {job_id})...")
     
-    # Remove fields not allowed in reset command
-    update_config = config.copy()
-    update_config.pop("name", None)  # Name cannot be updated via reset
-    
     # Create temporary config file for update
     temp_file = "temp_job_config.json"
     with open(temp_file, 'w') as f:
-        json.dump(update_config, f, indent=2)
+        json.dump(config, f, indent=2)
     
     try:
         cmd = f'databricks jobs reset --job-id {job_id} --json-file "{temp_file}"'
         run_command(cmd, capture_output=False)
-        print(f" Job updated successfully! Job ID: {job_id}")
+        print(f"Job updated successfully! Job ID: {job_id}")
     finally:
         if os.path.exists(temp_file):
             os.remove(temp_file)
@@ -108,7 +104,7 @@ def manage_job(config_path, force_update=False):
     job_name = config.get("name")
     
     if not job_name:
-        print(" Job name not found in configuration")
+        print("Job name not found in configuration")
         sys.exit(1)
     
     print(f"Managing job: {job_name}")
@@ -125,7 +121,7 @@ def manage_job(config_path, force_update=False):
             print(" Skipping update (use --force-update to update existing job)")
             job_id = existing_job_id
     else:
-        print(" Job does not exist, creating new job")
+        print("Job does not exist, creating new job")
         job_id = create_job(config_path)
     
     return job_id
@@ -168,6 +164,14 @@ def main():
         print(" DATABRICKS_HOST and DATABRICKS_TOKEN environment variables must be set")
         sys.exit(1)
     
+    # Configure Jobs API 2.1
+    print("Configuring Databricks CLI to use Jobs API 2.1...")
+    try:
+        run_command("databricks jobs configure --version=2.1", capture_output=False)
+        print("✓ Jobs API 2.1 configured")
+    except:
+        print("Warning: Could not configure Jobs API version, continuing anyway...")
+    
     print("=" * 60)
     print("Databricks Job Management")
     print("=" * 60)
@@ -192,12 +196,12 @@ def main():
             print(f" Job run triggered! Run ID: {run_id}")
             
             if job_url:
-                print(f" Run URL: {job_url}/runs/{run_id}")
+                print(f"Run URL: {job_url}/runs/{run_id}")
         except json.JSONDecodeError:
             print(f" Job run triggered!")
     
     print("\n" + "=" * 60)
-    print(" Job management completed successfully!")
+    print("Job management completed successfully!")
     print("=" * 60)
 
 

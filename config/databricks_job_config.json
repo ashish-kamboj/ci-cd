@@ -1,15 +1,19 @@
 {
   "name": "ML_Regression_Training",
-  "notebook_task": {
-    "notebook_path": "/ml-regression-model-dev/notebooks/train",
-    "base_parameters": {}
-  },
-  "timeout_seconds": 3600,
-  "max_retries": 1,
+  "tasks": [
+    {
+      "task_key": "ml_training_task",
+      "notebook_task": {
+        "notebook_path": "/ml-regression-model-dev/notebooks/train",
+        "base_parameters": {},
+        "source": "WORKSPACE"
+      },
+      "timeout_seconds": 3600
+    }
+  ],
   "email_notifications": {
-    "on_success": [],
-    "on_failure": [],
     "no_alert_for_skipped_runs": false
   },
+  "format": "MULTI_TASK",
   "max_concurrent_runs": 1
 }
