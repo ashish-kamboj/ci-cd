@@ -41,15 +41,15 @@ def delete_file_from_databricks(databricks_path):
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
-            print(f"✓ Deleted: {databricks_path}")
+            print(f" Deleted: {databricks_path}")
             return True
         else:
-            print(f"✗ Failed to delete: {databricks_path}")
+            print(f" Failed to delete: {databricks_path}")
             if "does not exist" not in result.stderr:
                 print(f"  Error: {result.stderr}")
             return True  # Return true even if file doesn't exist
     except Exception as e:
-        print(f"✗ Exception deleting {databricks_path}: {e}")
+        print(f" Exception deleting {databricks_path}: {e}")
         return False
 
 

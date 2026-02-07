@@ -112,17 +112,17 @@ def upload_file(source_path, target_path, databricks_path):
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
-            print(f"✓ Uploaded: {databricks_path}")
+            print(f" Uploaded: {databricks_path}")
             return True
         else:
-            print(f"✗ Failed to upload: {databricks_path}")
+            print(f" Failed to upload: {databricks_path}")
             if result.stderr:
                 print(f"  Error: {result.stderr}")
             if result.stdout:
                 print(f"  Output: {result.stdout}")
             return False
     except Exception as e:
-        print(f"✗ Exception uploading {databricks_path}: {e}")
+        print(f" Exception uploading {databricks_path}: {e}")
         return False
 
 
@@ -144,7 +144,7 @@ def sync_files(source_dir, target_path, branch):
         
         # Skip binary and compiled files
         if should_skip_upload(source_file):
-            print(f"⊘ Skipped: {rel_path} (binary/compiled file)")
+            print(f" Skipped: {rel_path} (binary/compiled file)")
             continue
         
         # Convert Windows path separators to forward slashes
