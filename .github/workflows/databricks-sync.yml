@@ -110,6 +110,40 @@ jobs:
           echo "Target Path: ${{ steps.target_path.outputs.workspace_path }}"
           echo "Branch: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
+          
+      - name: Determine job config file
+        id: job_config
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "config_file=config/databricks_job_config_prod.json" >> $GITHUB_OUTPUT
+          else
+            echo "config_file=config/databricks_job_config.json" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Check if job config changed
+        id: config_changed
+        run: |
+          # Check if config file exists in previous commit
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            if git diff HEAD~1 HEAD --exit-code ${{ steps.job_config.outputs.config_file }} > /dev/null 2>&1; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "Job config unchanged - skipping job update"
+            else
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "Job config changed - will update job"
+            fi
+          else
+            # First commit - always update
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "First commit - will create/update job"
+          fi
+          
+      - name: Create/Update Databricks Job
+        if: steps.config_changed.outputs.changed == 'true' || github.event_name == 'push'
+        run: |
+          python .github/scripts/manage_databricks_job.py \
+            --config "${{ steps.job_config.outputs.config_file }}" \
+            --force-update
 
   cleanup-deleted-files:
     name: Clean up Deleted Files from Databricks
