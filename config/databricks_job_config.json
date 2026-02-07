@@ -1,54 +1,27 @@
 {
-  "name": "ML_Regression_Pipeline",
-  "tasks": [
-    {
-      "task_key": "train_model",
-      "description": "Train linear regression model on Boston Housing dataset",
-      "notebook_task": {
-        "notebook_path": "/ml-regression-model-dev/notebooks/train",
-        "base_parameters": {}
-      },
-      "new_cluster": {
-        "spark_version": "13.3.x-scala2.12",
-        "node_type_id": "Standard_DS3_v2",
-        "num_workers": 1,
-        "spark_conf": {
-          "spark.databricks.delta.preview.enabled": "true"
-        }
-      },
-      "timeout_seconds": 3600,
-      "max_retries": 1
+  "name": "ML_Regression_Training",
+  "notebook_task": {
+    "notebook_path": "/ml-regression-model-dev/notebooks/train",
+    "base_parameters": {}
+  },
+  "new_cluster": {
+    "spark_version": "13.3.x-scala2.12",
+    "node_type_id": "Standard_DS3_v2",
+    "num_workers": 0,
+    "spark_conf": {
+      "spark.databricks.cluster.profile": "singleNode",
+      "spark.master": "local[*]"
     },
-    {
-      "task_key": "inference",
-      "description": "Run inference on new data using trained model",
-      "depends_on": [
-        {
-          "task_key": "train_model"
-        }
-      ],
-      "notebook_task": {
-        "notebook_path": "/ml-regression-model-dev/notebooks/inference",
-        "base_parameters": {}
-      },
-      "new_cluster": {
-        "spark_version": "13.3.x-scala2.12",
-        "node_type_id": "Standard_DS3_v2",
-        "num_workers": 1,
-        "spark_conf": {
-          "spark.databricks.delta.preview.enabled": "true"
-        }
-      },
-      "timeout_seconds": 3600,
-      "max_retries": 1
+    "custom_tags": {
+      "ResourceClass": "SingleNode"
     }
-  ],
+  },
+  "timeout_seconds": 3600,
+  "max_retries": 1,
   "email_notifications": {
     "on_success": [],
     "on_failure": [],
     "no_alert_for_skipped_runs": false
   },
-  "timeout_seconds": 7200,
-  "max_concurrent_runs": 1,
-  "format": "MULTI_TASK"
+  "max_concurrent_runs": 1
 }
