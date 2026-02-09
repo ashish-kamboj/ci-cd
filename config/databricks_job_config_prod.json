@@ -1,0 +1,24 @@
+{
+  "name": "ML_Regression_Training_Prod",
+  "tasks": [
+    {
+      "task_key": "ml_training_task",
+      "notebook_task": {
+        "notebook_path": "/ml-regression-model-prod/notebooks/train.ipynb",
+        "base_parameters": {},
+        "source": "WORKSPACE"
+      },
+      "timeout_seconds": 3600
+    }
+  ],
+  "schedule": {
+    "quartz_cron_expression": "0 0 2 * * ?",
+    "timezone_id": "UTC",
+    "pause_status": "PAUSED"
+  },
+  "email_notifications": {
+    "no_alert_for_skipped_runs": false
+  },
+  "format": "MULTI_TASK",
+  "max_concurrent_runs": 1
+}

@@ -7,7 +7,6 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 - **What it does**: Automatically tests and deploys ML code from GitHub to Databricks
 - **When it works**: Every time you push code to `dev` or `main` branch
 - **Where it goes**: `/ml-regression-model-dev` (dev) or `/ml-regression-model-prod` (prod)
-- **Setup time**: 15 minutes
 
 ---
 
@@ -15,7 +14,7 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 
 1. [Features](#features)
 2. [Project Structure](#project-structure)
-3. [Quick Start (5 minutes)](#quick-start-5-minutes)
+3. [Quick Start](#quick-start)
 4. [Setup Instructions](#setup-instructions)
 5. [How It Works](#how-it-works)
 6. [File Reference](#file-reference)
@@ -28,18 +27,20 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 ## Features
 
 ### CI/CD Pipeline
-- ✅ **Automated testing** - Unit tests run before deployment
-- ✅ **Dual environments** - Separate dev (`/ml-regression-model-dev`) and prod (`/ml-regression-model-prod`)
-- ✅ **File sync** - Automatically uploads new and modified files
-- ✅ **Cleanup** - Removes deleted files from Databricks
-- ✅ **Branch-aware** - Different paths based on `dev` or `main` branch
+- **Automated testing** - Unit tests run before deployment
+- **Dual environments** - Separate dev (`/ml-regression-model-dev`) and prod (`/ml-regression-model-prod`)
+- **File sync** - Automatically uploads new and modified files
+- **Cleanup** - Removes deleted files from Databricks
+- **Branch-aware** - Different paths based on `dev` or `main` branch
+- **Approval gates** - Mandatory review & approval required before production deployment
+- **Job automation** - Automatically creates/updates Databricks jobs (ML pipelines)
 
 ### ML Model
-- ✅ **Modular code** - Config, utils, notebook, tests
-- ✅ **YAML configuration** - Change parameters without code changes
-- ✅ **Linear regression** - Boston Housing dataset example
-- ✅ **Comprehensive tests** - 12 unit tests for all functionality
-- ✅ **Metrics tracking** - Automatic MSE, RMSE, MAE, R² reporting
+- **Modular code** - Config, utils, notebook, tests
+- **YAML configuration** - Change parameters without code changes
+- **Linear regression** - Boston Housing dataset example
+- **Comprehensive tests** - 12 unit tests for all functionality
+- **Metrics tracking** - Automatic MSE, RMSE, MAE, R² reporting
 
 ---
 
@@ -52,30 +53,35 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 │   │   └── databricks-sync.yml          # Main CI/CD workflow
 │   └── scripts/
 │       ├── sync_to_databricks.py        # File upload script
-│       └── cleanup_deleted_files.py     # Deletion handler
+│       ├── cleanup_deleted_files.py     # Deletion handler
+│       └── manage_databricks_job.py     # Job creation/update script
 │
 ├── config/
-│   └── model_config.yaml                # Model parameters (edit this)
+│   ├── model_config.yaml                # Model parameters (edit this)
+│   ├── databricks_job_config.json       # Dev job configuration
+│   └── databricks_job_config_prod.json  # Prod job configuration
 │
 ├── src/
 │   ├── __init__.py                      # Package marker
 │   └── utils.py                         # Utility functions
 │
 ├── notebooks/
-│   └── train.ipynb                      # Training notebook
+│   ├── train.ipynb                      # Training notebook
+│   └── inference.ipynb                  # Inference notebook
 │
 ├── tests/
 │   └── test_model.py                    # 12 unit tests
 │
 ├── requirements.txt                     # Python dependencies
 ├── .gitignore                          # Git ignore patterns
-├── README.md                           # This file
-└── QUICK_START.md                      # 5-min setup guide
+├── README.md                           # This file (project overview)
+├── QUICK_START.md                      # 5-min setup guide
+└── DATABRICKS_JOBS_GUIDE.md            # Job automation & configuration
 ```
 
 ---
 
-## Quick Start (5 minutes)
+## Quick Start
 
 ### Step 1: Get Databricks Credentials
 
@@ -103,7 +109,7 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 
 ---
 
-## 📖 Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 
@@ -137,7 +143,57 @@ Steps:
 3. New repository secret → Enter name and value
 4. Click **Add secret**
 
-#### 3. Verify Setup
+#### 3. Create GitHub Environments (Optional but Recommended)
+
+To enable **approval gates** for production deployments:
+
+**For development (auto-deploy):**
+1. Go to GitHub repo → **Settings** → **Environments**
+2. Click **New environment**
+3. Name: `databricks-dev`
+4. Click **Configure environment** (keep defaults, no protection rules)
+5. Click **Save**
+
+**For production (requires approval):**
+1. Click **New environment** again
+2. Name: `databricks-prod`
+3. Under **Deployment branches and tags**:
+   - Select **Selected branches**
+   - Add branch: `main`
+4. Under **Required reviewers**:
+   - ✓ Check the box
+   - Add yourself or team members who should approve prod deployments
+5. Click **Save protection rules**
+
+**Result:**
+- `dev` branch → `databricks-dev` (deploys automatically)
+- `main` branch → `databricks-prod` (pauses for approval)
+
+#### 4. Customize Databricks Jobs (Optional)
+
+The pipeline automatically creates/updates Databricks jobs for ML pipelines:
+
+**Job Configuration Files:**
+- `databricks_job_config.json` - Development job (dev branch)
+- `databricks_job_config_prod.json` - Production job (main branch)
+
+**What gets automated:**
+- Job creation if doesn't exist
+- Job updates when config changes
+- Cluster configuration
+- Notebook linking
+- Schedules (prod only, starts paused)
+
+**To customize:** Edit the JSON files to change:
+- Job names
+- Cluster sizes
+- Schedules
+- Email notifications
+- Multi-task workflows
+
+**Complete guide:** See [DATABRICKS_JOBS_GUIDE.md](DATABRICKS_JOBS_GUIDE.md) for detailed instructions.
+
+#### 5. Verify Setup
 
 1. Make a small change (e.g., update `config/model_config.yaml`)
 2. Commit: `git commit -m "test: verify pipeline"`
@@ -151,38 +207,52 @@ Steps:
 
 ### Automatic Workflow
 
+#### Development Branch (auto-deploy)
 ```
-┌─────────────────────┐
-│  You Push Code      │
-│  (dev or main)      │
-└──────────┬──────────┘
-           │
-           v
-┌─────────────────────┐
-│  Run Unit Tests     │
-│  (pytest)           │
-└──────────┬──────────┘
-           │
-      ┌────┴────┐
-      │         │
-      v         v
-   PASS      FAIL
-      │         │
-      v         v
-    SYNC     STOP
-   FILES   DEPLOY
-      │
-      v
-┌──────────────────────────────┐
-│ Upload to Databricks:        │
-│ • /ml-regression-model-dev   │
-│ • /ml-regression-model-prod  │
-└──────────────────────────────┘
-      │
-      v
-┌──────────────────────────┐
-│ Clean Up Deleted Files   │
-└──────────────────────────┘
+Push to dev
+    ↓
+Run Tests
+    ↓
+   PASS? ──→ NO ──→ Stop
+    ↓
+   YES
+    ↓
+Sync to Databricks (/ml-regression-model-dev)
+    ↓
+Create/Update Databricks Job (ML_Regression_Pipeline)
+    ↓
+Clean up deleted files
+    Done
+```
+
+#### Production Branch (requires approval)
+```
+Push to main
+    ↓
+Run Tests
+    ↓
+   PASS? ──→ NO ──→ Stop
+    ↓
+   YES
+    ↓
+⏸️  AWAIT APPROVAL
+    (GitHub pauses workflow)
+    (Reviewers notified)
+    ↓
+Reviewer clicks "Approve"?
+    ↓
+   YES ──→ Sync to Databricks (/ml-regression-model-prod)
+    ↓
+Create/Update Databricks Job (ML_Regression_Pipeline_Prod)
+    ↓
+   NO ──→ Stop (deployment blocked)
+    ↓
+Clean up deleted files
+    Done
+```
+    ↓
+Clean up deleted files
+    Done
 ```
 
 ### Branch Behavior
@@ -194,8 +264,13 @@ Steps:
 
 ### What Gets Synced
 
-✅ **Included**: `.py`, `.yaml`, `.ipynb`, `.txt`, `.md` files  
-❌ **Excluded**: `.git`, `__pycache__`, `.pyc`, `.DS_Store`  
+✅ **Included**: `.py`, `.yaml`, `.ipynb` (Jupyter notebooks), `.txt`, `.md` files
+- Python files: Synced as SOURCE code (auto-detected)
+- YAML config: Synced as PYTHON code
+- **Jupyter notebooks**: Synced with JUPYTER format for proper rendering
+- Markdown & text: Synced as documentation
+  
+❌ **Excluded**: `.git`, `__pycache__`, `.pyc`, `.DS_Store`, binary files  
 
 ### What Happens on Delete
 
@@ -217,8 +292,11 @@ When you delete a file locally and push:
 - Uses secrets for authentication
 
 **`sync_to_databricks.py`**
-- Uploads files to Databricks
-- Smart language detection
+- Uploads files to Databricks workspace
+- Smart language detection for code files
+- Special handling for Jupyter notebooks (.ipynb files)
+  - Uses `--format JUPYTER` for proper notebook import
+  - Preserves notebook structure and cell formatting
 - Excludes binary and cache files
 - Error reporting with diagnostics
 
@@ -226,6 +304,49 @@ When you delete a file locally and push:
 - Detects deleted files via git diff
 - Removes them from Databricks workspace
 - Prevents workspace clutter
+
+---
+
+## Approval Process (Production Safety)
+
+### How Approval Gates Work
+
+When you push to the `main` branch (production), the workflow **pauses automatically** and waits for approval before deploying:
+
+1. **Tests Run** - Unit tests execute first
+2. **Workflow Pauses** - If tests pass, workflow waits for approval
+3. **Notification** - Configured reviewers are notified
+4. **Review** - Reviewers examine the changes in GitHub
+5. **Decision** - Reviewer clicks "Approve" or "Reject"
+6. **Deploy or Block** - Approved → sync to Databricks, Rejected → stop
+
+### Approval Workflow in GitHub Actions
+
+**Step-by-step:**
+
+1. You push code to `main` branch
+2. Tests run automatically
+3. GitHub Actions shows workflow status → **Awaiting approval**
+4. Go to **Actions** tab → Click the workflow
+5. You'll see button: **Review deployments**
+6. Select required reviewers and click **Approve**
+7. Workflow resumes and syncs to Databricks
+
+### Environment Configuration
+
+| Environment | Branch | Auto-Deploy? | Requires Approval? |
+|-------------|--------|--------------|-------------------|
+| `databricks-dev` | `dev` | Yes | No |
+| `databricks-prod` | `main` | No | Yes |
+
+### Why This Matters
+
+- **Safety**: Prevents accidental production deployments
+- **Control**: Team lead/senior engineer must review changes
+- **Audit Trail**: GitHub records who approved what and when
+- **Rollback Ready**: Time to prepare rollback if needed
+
+---
 
 ### ML Code (`src/`, `config/`, `notebooks/`)
 
@@ -444,7 +565,7 @@ databricks-cli
 
 ---
 
-## 🎓 Best Practices
+## Best Practices
 
 1. **Test before pushing**
    ```bash
@@ -476,11 +597,11 @@ databricks-cli
 
 ## Security
 
-- ✅ Never commit secrets to repository
-- ✅ Rotate Databricks tokens regularly (90+ days)
-- ✅ Use repository secrets (not organization-level)
-- ✅ Restrict Databricks token permissions if possible
-- ✅ Review workflow logs for sensitive information
+- Never commit secrets to repository
+- Rotate Databricks tokens regularly (90+ days)
+- Use repository secrets (not organization-level)
+- Restrict Databricks token permissions if possible
+- Review workflow logs for sensitive information
 
 ---
 
@@ -543,13 +664,17 @@ features = config['model_config']['features']['numerical_features']
 
 ---
 
-## Next steps
+## All Set!
 
-1. ✅ Verify secrets are added
-2. ✅ Make a test push to `dev`
-3. ✅ Check Actions tab
-4. ✅ Confirm files in Databricks
-5. ✅ Run training notebook
-6. ✅ Review metrics and results
+CI/CD pipeline is ready to use. Next steps:
+
+1. Verify secrets are added
+2. Make a test push to `dev`
+3. Check Actions tab
+4. Confirm files in Databricks
+5. Run training notebook
+6. Review metrics and results
 
 For quick setup reference, see [QUICK_START.md](QUICK_START.md).
+
+---

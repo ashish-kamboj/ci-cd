@@ -1,0 +1,19 @@
+{
+  "name": "ML_Regression_Training",
+  "tasks": [
+    {
+      "task_key": "ml_training_task",
+      "notebook_task": {
+        "notebook_path": "/ml-regression-model-dev/notebooks/train.ipynb",
+        "base_parameters": {},
+        "source": "WORKSPACE"
+      },
+      "timeout_seconds": 3600
+    }
+  ],
+  "email_notifications": {
+    "no_alert_for_skipped_runs": false
+  },
+  "format": "MULTI_TASK",
+  "max_concurrent_runs": 1
+}
