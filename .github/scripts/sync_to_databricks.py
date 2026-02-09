@@ -2,6 +2,7 @@
 """
 Sync repository files to Databricks workspace.
 This script uploads new and modified files to the Databricks workspace.
+Includes special handling for Jupyter notebooks (.ipynb files).
 """
 
 import os
@@ -67,14 +68,20 @@ def should_skip_upload(file_path):
     return extension in skip_extensions
 
 
+def is_jupyter_notebook(file_path):
+    """
+    Check if file is a Jupyter notebook.
+    """
+    return file_path.lower().endswith('.ipynb')
+
+
 def get_language_for_file(file_path):
     """
     Determine the language for a file based on extension.
     For code files, returns specific language.
     For other files, returns PYTHON as default (Databricks requirement).
     
-    Note: Non-code files (.md, .yaml, .txt, .json) are uploaded with PYTHON
-    language but display as their original type in Databricks.
+    Note: .ipynb files are handled separately with import_notebook() function.
     """
     extension = os.path.splitext(file_path)[1].lower()
     
@@ -91,9 +98,52 @@ def get_language_for_file(file_path):
     return code_extensions.get(extension, 'PYTHON')
 
 
+def import_notebook(source_path, databricks_path):
+    """
+    Import a Jupyter notebook to Databricks workspace.
+    Uses the special 'import' command with format JUPYTER.
+    """
+    try:
+        # Ensure target directory exists
+        target_dir = os.path.dirname(databricks_path)
+        mkdir_result = subprocess.run(
+            ['databricks', 'workspace', 'mkdirs', target_dir],
+            capture_output=True,
+            text=True
+        )
+        
+        # Import notebook with JUPYTER format
+        # The --format flag tells Databricks to treat this as a notebook
+        cmd = [
+            'databricks', 'workspace', 'import',
+            source_path,
+            databricks_path,
+            '--language', 'PYTHON',  # Default language for the notebook
+            '--format', 'JUPYTER',    # Critical: tells Databricks this is a notebook
+            '--overwrite'
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print(f"✓ Uploaded notebook: {databricks_path}")
+            return True
+        else:
+            print(f"✗ Failed to upload notebook: {databricks_path}")
+            if result.stderr:
+                print(f"  Error: {result.stderr}")
+            if result.stdout:
+                print(f"  Output: {result.stdout}")
+            return False
+    except Exception as e:
+        print(f"✗ Exception uploading notebook {databricks_path}: {e}")
+        return False
+
+
 def upload_file(source_path, target_path, databricks_path):
     """
     Upload a single file to Databricks using databricks-cli.
+    Regular files (non-notebooks) are uploaded as source code.
     """
     try:
         # Ensure target directory exists
@@ -107,28 +157,36 @@ def upload_file(source_path, target_path, databricks_path):
         language = get_language_for_file(source_path)
         
         # Build command with language and overwrite flag
-        cmd = ['databricks', 'workspace', 'import', source_path, databricks_path, '--language', language, '--overwrite']
+        # Note: Regular files use 'SOURCE' format (default)
+        cmd = [
+            'databricks', 'workspace', 'import',
+            source_path,
+            databricks_path,
+            '--language', language,
+            '--overwrite'
+        ]
         
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
-            print(f" Uploaded: {databricks_path}")
+            print(f"✓ Uploaded: {databricks_path}")
             return True
         else:
-            print(f" Failed to upload: {databricks_path}")
+            print(f"✗ Failed to upload: {databricks_path}")
             if result.stderr:
                 print(f"  Error: {result.stderr}")
             if result.stdout:
                 print(f"  Output: {result.stdout}")
             return False
     except Exception as e:
-        print(f" Exception uploading {databricks_path}: {e}")
+        print(f"✗ Exception uploading {databricks_path}: {e}")
         return False
 
 
 def sync_files(source_dir, target_path, branch):
     """
     Sync files to Databricks workspace.
+    Handles Jupyter notebooks (.ipynb) specially.
     """
     print(f"Starting sync from {source_dir} to {target_path}")
     print(f"Branch: {branch}")
@@ -138,13 +196,15 @@ def sync_files(source_dir, target_path, branch):
     
     successful = 0
     failed = 0
+    skipped = 0
     
     for rel_path in all_files:
         source_file = os.path.join(source_dir, rel_path)
         
         # Skip binary and compiled files
         if should_skip_upload(source_file):
-            print(f" Skipped: {rel_path} (binary/compiled file)")
+            print(f"⊘ Skipped: {rel_path} (binary/compiled file)")
+            skipped += 1
             continue
         
         # Convert Windows path separators to forward slashes
@@ -153,16 +213,26 @@ def sync_files(source_dir, target_path, branch):
         # Construct target path in Databricks
         databricks_target = f"{target_path}/{rel_path_unix}"
         
-        if upload_file(source_file, os.path.dirname(databricks_target), databricks_target):
-            successful += 1
+        # Handle Jupyter notebooks specially
+        if is_jupyter_notebook(source_file):
+            if import_notebook(source_file, databricks_target):
+                successful += 1
+            else:
+                failed += 1
         else:
-            failed += 1
+            # Handle regular files
+            if upload_file(source_file, os.path.dirname(databricks_target), databricks_target):
+                successful += 1
+            else:
+                failed += 1
     
     print(f"\n{'='*50}")
     print(f"Sync Summary:")
     print(f"  Successful: {successful}")
     print(f"  Failed: {failed}")
-    print(f"  Total: {successful + failed}")
+    print(f"  Skipped: {skipped}")
+    print(f"  Total processed: {successful + failed}")
+    print(f"{'='*50}")
     
     return failed == 0
 
