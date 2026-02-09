@@ -7,7 +7,6 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 - **What it does**: Automatically tests and deploys ML code from GitHub to Databricks
 - **When it works**: Every time you push code to `dev` or `main` branch
 - **Where it goes**: `/ml-regression-model-dev` (dev) or `/ml-regression-model-prod` (prod)
-- **Setup time**: 15 minutes
 
 ---
 
@@ -15,7 +14,7 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 
 1. [Features](#features)
 2. [Project Structure](#project-structure)
-3. [Quick Start (5 minutes)](#quick-start-5-minutes)
+3. [Quick Start](#quick-start)
 4. [Setup Instructions](#setup-instructions)
 5. [How It Works](#how-it-works)
 6. [File Reference](#file-reference)
@@ -82,7 +81,7 @@ A complete, production-ready CI/CD pipeline for ML projects using GitHub Actions
 
 ---
 
-## Quick Start (5 minutes)
+## Quick Start
 
 ### Step 1: Get Databricks Credentials
 
@@ -223,7 +222,7 @@ Sync to Databricks (/ml-regression-model-dev)
 Create/Update Databricks Job (ML_Regression_Pipeline)
     ↓
 Clean up deleted files
-    ✅ Done
+    Done
 ```
 
 #### Production Branch (requires approval)
@@ -249,11 +248,11 @@ Create/Update Databricks Job (ML_Regression_Pipeline_Prod)
    NO ──→ Stop (deployment blocked)
     ↓
 Clean up deleted files
-    ✅ Done
+    Done
 ```
     ↓
 Clean up deleted files
-    ✅ Done
+    Done
 ```
 
 ### Branch Behavior
@@ -265,8 +264,13 @@ Clean up deleted files
 
 ### What Gets Synced
 
-✅ **Included**: `.py`, `.yaml`, `.ipynb`, `.txt`, `.md` files  
-❌ **Excluded**: `.git`, `__pycache__`, `.pyc`, `.DS_Store`  
+✅ **Included**: `.py`, `.yaml`, `.ipynb` (Jupyter notebooks), `.txt`, `.md` files
+- Python files: Synced as SOURCE code (auto-detected)
+- YAML config: Synced as PYTHON code
+- **Jupyter notebooks**: Synced with JUPYTER format for proper rendering
+- Markdown & text: Synced as documentation
+  
+❌ **Excluded**: `.git`, `__pycache__`, `.pyc`, `.DS_Store`, binary files  
 
 ### What Happens on Delete
 
@@ -288,8 +292,11 @@ When you delete a file locally and push:
 - Uses secrets for authentication
 
 **`sync_to_databricks.py`**
-- Uploads files to Databricks
-- Smart language detection
+- Uploads files to Databricks workspace
+- Smart language detection for code files
+- Special handling for Jupyter notebooks (.ipynb files)
+  - Uses `--format JUPYTER` for proper notebook import
+  - Preserves notebook structure and cell formatting
 - Excludes binary and cache files
 - Error reporting with diagnostics
 
@@ -525,8 +532,8 @@ python .github/scripts/sync_to_databricks.py \
 2. **Git** → Commits and pushes to GitHub
 3. **GitHub Actions** → Detects push event
 4. **Test Job** → Runs `pytest tests/`
-   - If fails: Stop, don't deploy
-   - If passes: Continue to sync
+   - If fails: ❌ Stop, don't deploy
+   - If passes: ✅ Continue to sync
 5. **Sync Job** → Uploads files via Databricks CLI
    - Determines path (dev or prod)
    - Creates workspace directories
@@ -558,7 +565,7 @@ databricks-cli
 
 ---
 
-## 🎓 Best Practices
+## Best Practices
 
 1. **Test before pushing**
    ```bash
@@ -661,14 +668,13 @@ features = config['model_config']['features']['numerical_features']
 
 CI/CD pipeline is ready to use. Next steps:
 
-1. ✅ Verify secrets are added
-2. ✅ Make a test push to `dev`
-3. ✅ Check Actions tab
-4. ✅ Confirm files in Databricks
-5. ✅ Run training notebook
-6. ✅ Review metrics and results
+1. Verify secrets are added
+2. Make a test push to `dev`
+3. Check Actions tab
+4. Confirm files in Databricks
+5. Run training notebook
+6. Review metrics and results
 
 For quick setup reference, see [QUICK_START.md](QUICK_START.md).
 
 ---
-

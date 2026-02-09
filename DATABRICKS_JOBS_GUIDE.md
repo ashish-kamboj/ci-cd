@@ -28,7 +28,7 @@ When you push code to GitHub, the CI/CD pipeline automatically:
 **Updates existing jobs** with new configuration  
 **Manages separate dev and prod jobs** based on branch  
 **Sets up job schedules** (for production)  
-**Syncs notebooks** to Databricks workspace  
+**Syncs notebooks** to Databricks workspace (with JUPYTER format)  
 **Configures training pipelines** with MULTI_TASK format  
 **Updates only when config changes** (efficient, no unnecessary updates)  
 
@@ -146,6 +146,152 @@ The `manage_databricks_job.py` script:
 4. **Updates existing job** with `--force-update` flag
 5. **Outputs job URL** for easy access
 
+---
+
+## Jupyter Notebook Syncing
+
+CI/CD pipeline automatically syncs Jupyter notebooks (.ipynb files) to Databricks with proper formatting.
+
+### How Notebooks Are Synced
+
+**Before sync:**
+```
+notebooks/
+├── train.ipynb
+└── inference.ipynb
+```
+
+**After sync (in Databricks workspace):**
+```
+/ml-regression-model-dev/
+└── notebooks/
+    ├── train.ipynb     ✓ Imported with JUPYTER format
+    └── inference.ipynb ✓ Imported with JUPYTER format
+```
+
+### Key Features
+
+**JUPYTER Format Import** - Uses `--format JUPYTER` for proper rendering  
+**Cell Structure Preserved** - All cells, outputs, and formatting maintained  
+**Executable in Databricks** - Can run directly in workspace  
+**Integration with Jobs** - Jobs reference these synced notebooks  
+**Automatic Updates** - Modifications to .ipynb files sync on next push  
+
+### Notebook Execution in Jobs
+
+When your job runs, it executes the synced notebook:
+
+```json
+{
+  "notebook_task": {
+    "notebook_path": "/ml-regression-model-dev/notebooks/train.ipynb",
+    "source": "WORKSPACE"
+  }
+}
+```
+
+Databricks:
+1. Locates notebook at specified path
+2. Executes all cells in order
+3. Captures outputs and metrics
+4. Returns results and logs
+
+### Python Code in Notebooks
+
+Notebooks can include:
+
+**Python code** - Executed as PySpark  
+**SQL queries** - Via `%sql` magic  
+**Shell commands** - Via `%sh` magic  
+**Markdown cells** - For documentation  
+**Visualizations** - Charts, plots, tables  
+**Databricks utilities** - `dbutils` for file operations  
+
+Example notebook cell:
+
+```python
+# In Databricks notebook
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+
+# Load data
+data = pd.read_csv("/path/to/data.csv")
+
+# Train model
+model = LinearRegression()
+model.fit(X, y)
+
+# Log metrics
+print(f"R² Score: {model.score(X, y)}")
+dbutils.notebook.run("/path/to/other_notebook", 60)
+```
+
+### Syncing Your Own Notebooks
+
+1. **Create or modify** `.ipynb` file locally
+2. **Commit to Git**
+   ```bash
+   git add notebooks/my_notebook.ipynb
+   git commit -m "feat: add new analysis notebook"
+   ```
+3. **Push to GitHub**
+   ```bash
+   git push origin dev
+   ```
+4. **Workflow syncs automatically** to Databricks
+5. **Use in jobs** by referencing the path
+
+### Notebook Best Practices
+
+**Clear naming** - `data_prep.ipynb`, `train_model.ipynb`  
+**Add markdown cells** - Explain what each section does  
+**Modular structure** - One notebook per task  
+**Parameterize** - Use widgets for dynamic inputs  
+**Error handling** - Catch and handle exceptions  
+**Logging** - Print progress and metrics  
+
+Example parameterized notebook:
+
+```python
+# Create widgets for parameters
+dbutils.widgets.text("model_type", "linear_regression")
+dbutils.widgets.text("test_size", "0.2")
+
+# Get parameter values
+model_type = dbutils.widgets.get("model_type")
+test_size = float(dbutils.widgets.get("test_size"))
+
+# Use in code
+if model_type == "linear_regression":
+    model = LinearRegression()
+elif model_type == "random_forest":
+    model = RandomForestRegressor()
+```
+
+Then pass parameters in job config:
+
+```json
+"notebook_task": {
+  "notebook_path": "/ml-regression-model-dev/notebooks/train",
+  "base_parameters": {
+    "model_type": "random_forest",
+    "test_size": "0.3"
+  }
+}
+```
+
+---
+
+### Script Behavior
+
+The `manage_databricks_job.py` script:
+
+1. **Loads configuration** from JSON file
+2. **Checks for existing job** with same name
+3. **Creates new job** if it doesn't exist
+4. **Updates existing job** with `--force-update` flag
+5. **Outputs job URL** for easy access
+
 ### Idempotency
 
 Jobs are **idempotent** - running the pipeline multiple times:
@@ -155,7 +301,7 @@ Jobs are **idempotent** - running the pipeline multiple times:
 
 ---
 
-## 🛠️ Customizing Your Jobs
+## Customizing Your Jobs
 
 ### 1. Change Job Name
 
@@ -167,7 +313,7 @@ Edit the job config file:
 }
 ```
 
-**Important:** Changing the name creates a NEW job (old job remains)
+⚠️ **Important:** Changing the name creates a NEW job (old job remains)
 
 ### 2. Add Multiple Tasks
 
@@ -801,6 +947,136 @@ databricks clusters list-node-types
 3. Push code to `dev` branch to test job creation
 4. Verify job appears in Databricks UI (Workflows → Jobs)
 5. Run job manually to test
+---
+
+## Technical Details: File Sync Implementation
+
+### sync_to_databricks.py Script
+
+The script intelligently handles different file types:
+
+**File Processing Flow:**
+
+```
+File discovered in git
+    ↓
+Is it binary/compiled? → YES → Skip (don't upload)
+    ↓ NO
+Is it a Jupyter notebook (.ipynb)? → YES → import_notebook()
+    ↓ NO
+Is it source code? → upload_file()
+```
+
+### Jupyter Notebook Handling
+
+When a `.ipynb` file is detected:
+
+```python
+def import_notebook(source_path, databricks_path):
+    # Create directory if needed
+    databricks workspace mkdirs <target_dir>
+    
+    # Import with JUPYTER format (critical!)
+    databricks workspace import \
+      <source_path> \
+      <target_path> \
+      --language PYTHON \
+      --format JUPYTER \           # ← Preserves notebook structure
+      --overwrite
+```
+
+**Key aspects:**
+- `--format JUPYTER` - Tells Databricks to treat as notebook, not raw code
+- `--language PYTHON` - Default language (can be changed per notebook)
+- `--overwrite` - Updates existing notebooks on push
+- Directory creation - Ensures target paths exist before import
+
+### Source Code Handling
+
+For `.py`, `.yaml`, and other code files:
+
+```python
+def upload_file(source_path, target_path, databricks_path):
+    # Detect language from extension
+    language = get_language_for_file(source_path)
+    # .py → PYTHON, .scala → SCALA, etc.
+    
+    # Upload as source code
+    databricks workspace import \
+      <source_path> \
+      <target_path> \
+      --language <DETECTED> \
+      --overwrite
+```
+
+**Language Detection:**
+| Extension | Language |
+|-----------|----------|
+| `.py` | PYTHON |
+| `.scala` | SCALA |
+| `.sql` | SQL |
+| `.r` | R |
+| `.yaml`, `.md`, `.json`, etc. | PYTHON (default) |
+
+### File Filtering
+
+**Excluded (not synced):**
+- `.git`, `.github`, `.gitignore`
+- `__pycache__`, `.pytest_cache`
+- `*.pyc`, `*.pyo` (compiled Python)
+- `.DS_Store` (macOS metadata)
+- Binary/executable files
+
+**Included (synced):**
+- Source code (`.py`, `.scala`, `.sql`, `.r`)
+- Jupyter notebooks (`.ipynb`)
+- Configuration (`.yaml`, `.json`)
+- Documentation (`.md`, `.txt`)
+
+### Sync Summary Output
+
+```
+50 matches (more results are available)
+Starting sync from . to /ml-regression-model-dev
+Branch: dev
+Total files to sync: 28
+
+✓ Uploaded: /ml-regression-model-dev/src/utils.py
+✓ Uploaded: /ml-regression-model-dev/config/model_config.yaml
+✓ Uploaded notebook: /ml-regression-model-dev/notebooks/train.ipynb
+✓ Uploaded notebook: /ml-regression-model-dev/notebooks/inference.ipynb
+⊘ Skipped: .gitignore (excluded pattern)
+...
+
+==================================================
+Sync Summary:
+  Successful: 25
+  Failed: 0
+  Skipped: 3
+  Total processed: 25
+==================================================
+```
+
+### Error Handling
+
+If sync fails for a file:
+
+```
+✗ Failed to upload: /ml-regression-model-dev/src/utils.py
+  Error: <error message from CLI>
+  Output: <any additional output>
+```
+
+**Common failures:**
+- Path too long (Databricks limitation)
+- Invalid characters in filename
+- Permission issues
+- Network timeout
+
+**Solution:** Check error message, fix locally, and re-push to retry
+
+---
+
 6. Push to `main` for production job creation
 7. Enable schedule in prod job when ready
 
